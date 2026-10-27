@@ -22,7 +22,6 @@ type ProjectState = {
   updatePlan: (plan: HousePlan) => void;
   addVariant: (partId: string, variant: ImageVariant) => void;
   selectVariant: (partId: string, variantId: string) => void;
-  clearVariants: (partId: string) => void;
   setSam3d: (asset: Sam3dAsset) => void;
   reset: () => void;
 };
@@ -76,16 +75,11 @@ export const useProject = create<ProjectState>()(
           const selectedId = current.selectedId === variantId ? null : variantId;
           return { visuals: { ...s.visuals, [partId]: { ...current, selectedId } } };
         }),
-      clearVariants: (partId) =>
-        setState((s) => {
-          const { [partId]: _removed, ...rest } = s.visuals;
-          return { visuals: rest };
-        }),
       setSam3d: (asset) => setState((s) => ({ sam3d: { ...s.sam3d, [asset.partId]: asset } })),
       reset: () => setState({ step: "sketch", brief: emptyBrief, sketches: [], plan: null, visuals: {}, sam3d: {} }),
     }),
     {
-      name: "griha3d-project",
+      name: "3d-architect-project",
       storage: createJSONStorage(() => idbStorage),
       partialize: ({ step, brief, sketches, plan, visuals, sam3d }) => ({ step, brief, sketches, plan, visuals, sam3d }),
     },

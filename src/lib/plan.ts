@@ -44,7 +44,7 @@ export function mockPlan(style: string): HousePlan {
       { id: "r3", name: "Parking", type: "parking", floor: 0, x: 0, y: 0, width: 8, depth: 14 },
       { id: "r4", name: "Kitchen", type: "kitchen", floor: 0, x: 0, y: 14, width: 10, depth: 10 },
       { id: "r5", name: "Dining", type: "dining", floor: 0, x: 10, y: 14, width: 10, depth: 10 },
-      { id: "r6", name: "Bathroom", type: "bathroom", floor: 0, x: 20, y: 14, width: 10, depth: 8 },
+      { id: "r6", name: "Bathroom", type: "bathroom", floor: 0, x: 20, y: 14, width: 10, depth: 10 },
       { id: "r7", name: "Master Bedroom", type: "bedroom", floor: 0, x: 0, y: 24, width: 15, depth: 16 },
       { id: "r8", name: "Bedroom 2", type: "bedroom", floor: 0, x: 15, y: 24, width: 15, depth: 16 },
       { id: "r9", name: "Passage", type: "passage", floor: 0, x: 8, y: 6, width: 6, depth: 8 },

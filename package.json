@@ -1,5 +1,5 @@
 {
-  "name": "architect-next-1793123767",
+  "name": "3d-architect",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -17,6 +17,7 @@
     "openai": "^7.39.0",
     "react": "19.3.1",
     "react-dom": "19.3.1",
+    "server-only": "^0.0.1",
     "three": "^0.186.1",
     "zod": "^4.6.7",
     "zustand": "^5.0.15"
