@@ -52,7 +52,18 @@ export function SketchStep() {
           <span className="text-3xl">📐</span>
           <span className="font-medium">Upload or take a photo</span>
           <span className="muted text-sm">JPG / PNG, up to 6 sketches</span>
-          <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => onFiles(e.target.files)} />
+          <input
+            type="file"
+            accept="image/*"
+            multiple
+            className="hidden"
+            onChange={async (e) => {
+              const input = e.currentTarget;
+              await onFiles(input.files);
+              // Reset so picking the same file again still triggers onChange.
+              input.value = "";
+            }}
+          />
         </label>
         {sketches.length > 0 && (
           <ul className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">

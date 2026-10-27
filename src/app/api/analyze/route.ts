@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { ANALYZE_SYSTEM_PROMPT, analyzeUserText } from "@/lib/prompts";
 import { isMockMode, metaClient, TEXT_MODEL } from "@/lib/meta";
-import { mockPlan, normalizePlan } from "@/lib/plan";
+import { mockPlan, normalizePlan, snapPlan } from "@/lib/plan";
 import { HousePlanSchema } from "@/lib/types";
 
 export const maxDuration = 120;
@@ -64,7 +64,7 @@ export async function POST(request: Request) {
       }
       const result = HousePlanSchema.safeParse(json);
       if (result.success) {
-        return Response.json({ plan: normalizePlan(result.data), mock: false });
+        return Response.json({ plan: normalizePlan(snapPlan(normalizePlan(result.data))), mock: false });
       }
       messages.push(
         { role: "assistant", content },

@@ -80,8 +80,6 @@ export function buildHouse(plan: HousePlan): Element[] {
     const { x, y, width: w, depth: d } = room;
 
     box(`mark-${room.id}`, "marking", room, room.floor, x, x + w, 0, 0.02, y, y + d);
-    if (room.floor === 0) box(`plinth-${room.id}`, "plinth", room, 0, x, x + w, 0, PLINTH, y, y + d);
-    box(`slab-${room.id}`, "slab", room, room.floor, x, x + w, top, top + SLAB, y, y + d);
     box(`tile-${room.id}`, "floorFinish", room, room.floor, x + WALL_THICKNESS, x + w - WALL_THICKNESS, base, base + 0.05, y + WALL_THICKNESS, y + d - WALL_THICKNESS);
 
     const sides: Side[] = ["N", "S", "W", "E"];
@@ -120,6 +118,54 @@ export function buildHouse(plan: HousePlan): Element[] {
         cursor = Math.max(cursor, g.end);
       });
       if (spanEnd > cursor) wall(`wall-${room.id}-${side}-end`, "wall", cursor, spanEnd, base, top);
+    }
+  }
+
+  // Treat each floor as one building: a continuous plinth/floor/slab under its footprint and
+  // exterior walls wherever no room wall reaches the outline, so unassigned space reads as open floor.
+  for (let floor = 0; floor < plan.floors; floor++) {
+    const rooms = plan.rooms.filter((r) => r.floor === floor);
+    if (!rooms.length) continue;
+    const minX = Math.min(...rooms.map((r) => r.x));
+    const maxX = Math.max(...rooms.map((r) => r.x + r.width));
+    const minY = Math.min(...rooms.map((r) => r.y));
+    const maxY = Math.max(...rooms.map((r) => r.y + r.depth));
+    const base = floorBase(plan, floor);
+    const top = base + plan.floorHeight;
+    if (floor === 0) box(`plinth-f${floor}`, "plinth", null, floor, minX, maxX, 0, PLINTH, minY, maxY);
+    box(`slab-f${floor}`, "slab", null, floor, minX, maxX, top, top + SLAB, minY, maxY);
+    box(`floor-f${floor}`, "floorFinish", null, floor, minX, maxX, base, base + 0.03, minY, maxY);
+
+    const perimeter: { side: Side; line: number; from: number; to: number }[] = [
+      { side: "N", line: minY, from: minX, to: maxX },
+      { side: "S", line: maxY, from: minX, to: maxX },
+      { side: "W", line: minX, from: minY, to: maxY },
+      { side: "E", line: maxX, from: minY, to: maxY },
+    ];
+    for (const { side, line, from, to } of perimeter) {
+      const horizontal = side === "N" || side === "S";
+      const covered = rooms
+        .filter((r) =>
+          horizontal
+            ? Math.abs((side === "N" ? r.y : r.y + r.depth) - line) < EPS
+            : Math.abs((side === "W" ? r.x : r.x + r.width) - line) < EPS,
+        )
+        .map((r) => (horizontal ? [r.x, r.x + r.width] : [r.y, r.y + r.depth]))
+        .sort((p, q) => p[0] - q[0]);
+      let cursor = from;
+      const fill = (a: number, b: number) => {
+        if (b - a < 0.2) return;
+        const t0 = side === "N" || side === "W" ? line : line - WALL_THICKNESS;
+        const t1 = t0 + WALL_THICKNESS;
+        const key = `perim-f${floor}-${side}-${a.toFixed(2)}`;
+        if (horizontal) box(key, "wall", null, floor, a, b, base, top, t0, t1, true);
+        else box(key, "wall", null, floor, t0, t1, base, top, a, b, true);
+      };
+      for (const [a, b] of covered) {
+        if (a > cursor) fill(cursor, a);
+        cursor = Math.max(cursor, b);
+      }
+      if (to > cursor) fill(cursor, to);
     }
   }
 

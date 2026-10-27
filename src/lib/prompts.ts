@@ -7,6 +7,11 @@ Rules:
 - All lengths are in FEET. If the sketch uses metres, convert (1 m = 3.281 ft).
 - Coordinate system: origin (0,0) is the NORTH-WEST corner of the plot, x grows to the EAST, y grows to the SOUTH.
 - Every room must sit fully inside the plot and rooms on the same floor must not overlap. Rooms may share walls.
+- PRESERVE the room dimensions written on the sketch exactly (convert feet-inches like 10'7½" to 10.625). Never stretch or shrink a labelled room to fill the plot; leftover space is fine and should stay empty or become a "passage" / "other" room.
+- Include every labelled space, even small unnamed ones (e.g. a "4' x 8'7½"" box becomes a "store" or "utility" room), and use labelled passage widths as written.
+- Overall plot dimensions on the sketch are outer dimensions; room labels are usually inner (carpet) sizes, so a few inches of difference between them is wall thickness, not missing space.
+- Rooms that share a wall on the sketch must TOUCH in your coordinates (e.g. room A ends at x=12 and room B starts at x=12). Don't leave wall-thickness gaps between rooms; absorb small differences (under ~1 ft) into the neighbouring room or passage.
+- Corridors, lobbies and any other unlabelled space between rooms inside the house must be explicit "passage" rooms that fill that space completely, running the full length shown on the sketch, so the rooms together cover the whole built-up area without gaps.
 - floor 0 is the ground floor, 1 is the first floor, and so on.
 - If a dimension is missing, infer a typical Indian residential size and record it in "assumptions".
 - Add at least one door per room and windows on external walls where sensible. Opening "offset" is measured in feet from the west end (for N/S walls) or north end (for E/W walls) of that room's wall.

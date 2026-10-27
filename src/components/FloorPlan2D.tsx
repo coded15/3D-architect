@@ -39,10 +39,10 @@ export function FloorPlan2D({ plan, floor, highlightRoomId, onRoomClick }: Props
             stroke="#333"
             strokeWidth={0.35}
           />
-          <text x={room.x + room.width / 2} y={room.y + room.depth / 2 - 0.4} textAnchor="middle" fontSize={Math.min(1.6, room.width / 6)} fontWeight={600} fill="#222">
+          <text x={room.x + room.width / 2} y={room.y + room.depth / 2 - 0.4} textAnchor="middle" fontSize={labelSize(room)} fontWeight={600} fill="#222">
             {room.name}
           </text>
-          <text x={room.x + room.width / 2} y={room.y + room.depth / 2 + 1.4} textAnchor="middle" fontSize={Math.min(1.1, room.width / 8)} fill="#444">
+          <text x={room.x + room.width / 2} y={room.y + room.depth / 2 + 1.4} textAnchor="middle" fontSize={Math.min(1.1, room.width / 8, labelSize(room) * 0.8)} fill="#444">
             {fmt(room.width)}′ × {fmt(room.depth)}′
           </text>
         </g>
@@ -80,6 +80,11 @@ function OpeningMark({ opening, room }: { opening: Opening; room: Room }) {
 
 function fmt(n: number) {
   return Number.isInteger(n) ? n.toString() : n.toFixed(1);
+}
+
+// Shrink long names so they stay inside narrow rooms (average glyph ≈ 0.6em wide).
+function labelSize(room: Room) {
+  return Math.min(1.6, room.width / 6, (room.width - 0.8) / (room.name.length * 0.6));
 }
 
 export function facingLabel(f: string) {

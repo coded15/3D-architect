@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { FloorPlan2D } from "@/components/FloorPlan2D";
-import { normalizePlan } from "@/lib/plan";
+import { normalizePlan, snapPlan } from "@/lib/plan";
 import { useProject } from "@/lib/store";
 import type { Room } from "@/lib/types";
 
@@ -91,6 +91,9 @@ export function PlanStep() {
           </button>
           <button type="button" className="btn-secondary" onClick={() => setStep("model")}>
             Open 3D view
+          </button>
+          <button type="button" className="btn-secondary" onClick={() => updatePlan(normalizePlan(snapPlan(plan)))}>
+            Close gaps between rooms
           </button>
         </div>
       </section>
