@@ -54,3 +54,47 @@ export function partImagePrompt(plan: HousePlan, part: VisualPart, style: string
   const size = room ? ` The room is about ${room.width} x ${room.depth} ft.` : "";
   return `Interior view of the ${part.title}.${size} ${part.prompt} ${common} Use the attached hand sketch only as a reference for where doors and windows are.`;
 }
+
+export const REVIEW_SYSTEM_PROMPT = `You review a structured floor plan that was extracted from a homeowner's rough hand-drawn sketch, before anyone builds anything from it.
+Your job is to find what is genuinely UNCLEAR and ask the homeowner short clarifying questions instead of guessing.
+
+You receive: the sketch image(s), the user's notes, the current plan JSON (feet; origin north-west; x east, y south), the list of connections (which doors join which spaces), and automatically detected issues (dead-end corridors, rooms with no door, rooms unreachable from the entrance, spaces the app auto-filled as passage).
+
+Ask about things like:
+- a corridor that leads to a dead end: should it be removed, become part of a room (which one), become a storage/utility nook, or lead somewhere via a new door?
+- space the app auto-filled: what is it really on the sketch?
+- doors that look guessed (not drawn on the sketch) or missing doors needed to reach a room (e.g. kitchen only reachable from outside)
+- room sizes that contradict the labels, unclear labels, where the main entrance is
+Rules:
+- Ask at most 6 questions, most important first. Ask nothing if the plan clearly matches the sketch.
+- Each question must be answerable by a homeowner with no architecture knowledge, in plain words. Mention rooms by their names, not ids.
+- "context" explains in one sentence what you noticed (e.g. "The sketch shows a 3 ft corridor but nothing at its north end").
+- Give 2-5 concrete "options"; make the first option your best guess. The UI always adds an "Other" free-text choice, so don't include one.
+- "roomIds" lists the plan room ids the question is about.`;
+
+export const REVISE_SYSTEM_PROMPT = `You update a structured floor plan using a homeowner's answers to clarifying questions about their hand-drawn sketch.
+Return the FULL updated plan JSON in the same schema.
+Rules:
+- Apply every answer faithfully. Where an answer is "Other: ...", follow the free text.
+- Keep everything the answers don't mention unchanged, including room ids, part ids and labelled sizes.
+- Same geometry rules as before: feet, origin north-west, x east, y south; rooms on a floor never overlap; rooms that share a wall touch exactly; corridors are explicit "passage" rooms; doors' "offset" is measured from the west (N/S walls) or north (E/W walls) end of that room's wall.
+- Every room must be reachable from the entrance through doors or open passages; no corridor may end in a dead end unless the user asked for it.
+- If an answer removes a room, also remove its openings and any "parts" pointing at it.
+- Add a short note of what changed to "assumptions".`;
+
+export function reviewUserText(planJson: string, connections: string[], issues: string[], notes: string): string {
+  return [
+    notes ? `User notes: ${notes}` : "User notes: (none)",
+    `Current plan JSON:\n${planJson}`,
+    `Connections:\n${connections.map((c) => `- ${c}`).join("\n") || "- (none)"}`,
+    `Automatically detected issues:\n${issues.map((i) => `- ${i}`).join("\n") || "- (none)"}`,
+  ].join("\n\n");
+}
+
+export function reviseUserText(planJson: string, answers: { question: string; answer: string }[], notes: string): string {
+  return [
+    notes ? `User notes: ${notes}` : "User notes: (none)",
+    `Current plan JSON:\n${planJson}`,
+    `Homeowner's answers:\n${answers.map((a, i) => `${i + 1}. Q: ${a.question}\n   A: ${a.answer}`).join("\n")}`,
+  ].join("\n\n");
+}

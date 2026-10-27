@@ -106,6 +106,32 @@ export type ProjectBrief = {
   style: string;
 };
 
+export const BriefSchema = z.object({
+  title: z.string(),
+  plotWidth: z.number().nullable(),
+  plotDepth: z.number().nullable(),
+  facing: FacingSchema.nullable(),
+  floors: z.number().nullable(),
+  notes: z.string(),
+  style: z.string(),
+});
+
+export const ClarifyingQuestionSchema = z.object({
+  id: z.string(),
+  question: z.string(),
+  // Why the AI is asking: what it saw on the sketch / in the plan that is ambiguous.
+  context: z.string(),
+  options: z.array(z.string()).min(2).max(5),
+  roomIds: z.array(z.string()),
+});
+export type ClarifyingQuestion = z.infer<typeof ClarifyingQuestionSchema>;
+
+export const ReviewSchema = z.object({
+  questions: z.array(ClarifyingQuestionSchema).max(6),
+});
+
+export type ClarifyAnswer = { questionId: string; question: string; answer: string };
+
 export type Sam3dAsset = {
   partId: string;
   variantId: string;

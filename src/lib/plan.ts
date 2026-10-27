@@ -2,6 +2,16 @@ import type { HousePlan, Room } from "./types";
 
 const clamp = (v: number, min: number, max: number) => Math.min(Math.max(v, min), max);
 
+// Spaces of these kinds flow into each other when they touch (one corridor, one verandah, one car porch).
+const OPEN_KINDS = new Set(["passage", "balcony", "parking"]);
+
+// Two touching rooms are really one space (so no wall between them) when they are the same open kind,
+// or two rectangles of the same room (same type and name).
+export function isSameSpace(a: Room, b: Room) {
+  if (a.type !== b.type) return false;
+  return OPEN_KINDS.has(a.type) || a.name.trim().toLowerCase() === b.name.trim().toLowerCase();
+}
+
 // Keep model output geometrically sane: rooms inside the plot, openings within their wall.
 export function normalizePlan(plan: HousePlan): HousePlan {
   const { width: pw, depth: pd } = plan.plot;
@@ -125,6 +135,82 @@ function apply(room: Room, axis: "x" | "y", end: "start" | "end", amount: number
 function overlaps(a: Room, b: Room) {
   const eps = 0.01;
   return a.x < b.x + b.width - eps && b.x < a.x + a.width - eps && a.y < b.y + b.depth - eps && b.y < a.y + a.depth - eps;
+}
+
+// Turn any space inside the house footprint that no room covers into passage, so leftover
+// corridor bits read as circulation rather than unexplained voids.
+export function fillLeftoverSpace(plan: HousePlan): HousePlan {
+  const rooms = [...plan.rooms];
+  for (let floor = 0; floor < plan.floors; floor++) {
+    const onFloor = rooms.filter((r) => r.floor === floor);
+    if (!onFloor.length) continue;
+    const xs = uniqueSorted(onFloor.flatMap((r) => [r.x, r.x + r.width]));
+    const ys = uniqueSorted(onFloor.flatMap((r) => [r.y, r.y + r.depth]));
+    const covered = (i: number, j: number) => {
+      const cx = (xs[i] + xs[i + 1]) / 2;
+      const cy = (ys[j] + ys[j + 1]) / 2;
+      return onFloor.some((r) => cx > r.x && cx < r.x + r.width && cy > r.y && cy < r.y + r.depth);
+    };
+    const used = ys.slice(0, -1).map(() => xs.slice(0, -1).map(() => false));
+    for (let j = 0; j < ys.length - 1; j++) {
+      for (let i = 0; i < xs.length - 1; i++) {
+        if (used[j][i] || covered(i, j)) continue;
+        // Grow the empty cell into the largest rectangle: first along x, then down while the whole row is empty.
+        let i2 = i;
+        while (i2 + 1 < xs.length - 1 && !used[j][i2 + 1] && !covered(i2 + 1, j)) i2++;
+        let j2 = j;
+        const rowEmpty = (row: number) => {
+          for (let k = i; k <= i2; k++) if (used[row][k] || covered(k, row)) return false;
+          return true;
+        };
+        while (j2 + 1 < ys.length - 1 && rowEmpty(j2 + 1)) j2++;
+        for (let row = j; row <= j2; row++) for (let k = i; k <= i2; k++) used[row][k] = true;
+        const rect = { x: xs[i], y: ys[j], width: xs[i2 + 1] - xs[i], depth: ys[j2 + 1] - ys[j] };
+        if (rect.width < 0.3 || rect.depth < 0.3) continue;
+        // Big notches on the outline are outdoor space (L-shaped houses); only corridor-sized ones are interior.
+        const onOutline = i === 0 || j === 0 || i2 === xs.length - 2 || j2 === ys.length - 2;
+        if (onOutline && Math.min(rect.width, rect.depth) > 5) continue;
+        rooms.push({ id: `fill-${floor}-${i}-${j}`, name: "Passage", type: "passage", floor, ...rect });
+      }
+    }
+  }
+  return { ...plan, rooms };
+}
+
+function uniqueSorted(values: number[]) {
+  const sorted = [...values].sort((a, b) => a - b);
+  return sorted.filter((v, i) => i === 0 || v - sorted[i - 1] > 0.01);
+}
+
+// Models often describe one doorway from both rooms at slightly different spots; keep one door per room pair.
+export function dedupeDoors(plan: HousePlan): HousePlan {
+  const byId = new Map(plan.rooms.map((r) => [r.id, r]));
+  const seen = new Set<string>();
+  const openings = plan.openings.filter((o) => {
+    if (o.kind !== "door") return true;
+    const room = byId.get(o.roomId);
+    if (!room) return true;
+    const horizontal = o.side === "N" || o.side === "S";
+    const mid = (horizontal ? room.x : room.y) + o.offset + o.width / 2;
+    const step = 0.5;
+    // Probe just across the wall to find which room this door leads into.
+    const px = horizontal ? mid : o.side === "W" ? room.x - step : room.x + room.width + step;
+    const py = horizontal ? (o.side === "N" ? room.y - step : room.y + room.depth + step) : mid;
+    const other = plan.rooms.find(
+      (r) => r.id !== room.id && r.floor === room.floor && px > r.x && px < r.x + r.width && py > r.y && py < r.y + r.depth,
+    );
+    if (!other) return true;
+    const key = [room.id, other.id].sort().join("|");
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+  return { ...plan, openings };
+}
+
+// Full cleanup for model output: snap neighbours, fill leftover space, drop duplicate doors.
+export function tidyPlan(plan: HousePlan): HousePlan {
+  return normalizePlan(dedupeDoors(fillLeftoverSpace(snapPlan(normalizePlan(plan)))));
 }
 
 export function mockPlan(style: string): HousePlan {

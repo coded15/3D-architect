@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { ClarifyPanel } from "@/components/ClarifyPanel";
 import { FloorPlan2D } from "@/components/FloorPlan2D";
-import { normalizePlan, snapPlan } from "@/lib/plan";
+import { normalizePlan, tidyPlan } from "@/lib/plan";
 import { useProject } from "@/lib/store";
 import type { Room } from "@/lib/types";
 
@@ -92,11 +93,15 @@ export function PlanStep() {
           <button type="button" className="btn-secondary" onClick={() => setStep("model")}>
             Open 3D view
           </button>
-          <button type="button" className="btn-secondary" onClick={() => updatePlan(normalizePlan(snapPlan(plan)))}>
+          <button type="button" className="btn-secondary" onClick={() => updatePlan(tidyPlan(plan))}>
             Close gaps between rooms
           </button>
         </div>
       </section>
+
+      <div className="lg:col-span-2">
+        <ClarifyPanel onHighlight={setSelected} />
+      </div>
     </div>
   );
 }
