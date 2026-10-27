@@ -41,6 +41,7 @@ export function House3D(props: Props) {
 
 function Scene({ plan, stage, maxFloor, cutRoof, palettes, exterior, selectedRoomId, onRoomClick }: Props) {
   const elements = useMemo(() => buildHouse(plan), [plan]);
+  const roomTypes = useMemo(() => new Map(plan.rooms.map((r) => [r.id, r.type])), [plan]);
   const topFloor = Math.min(maxFloor, plan.floors - 1);
 
   const visible = elements.flatMap((el) => {
@@ -76,7 +77,10 @@ function Scene({ plan, stage, maxFloor, cutRoof, palettes, exterior, selectedRoo
       {visible.map((el) => (
         <mesh key={el.key} position={el.position} onClick={el.roomId && clickable(el) ? click(el.roomId) : undefined}>
           <boxGeometry args={el.size} />
-          <meshStandardMaterial {...material(el, stage, palettes, exterior, selectedRoomId)} />
+          <meshStandardMaterial
+            {...material(el, stage, palettes, exterior, selectedRoomId)}
+            {...(el.kind === "marking" ? { color: ROOM_COLORS[roomTypes.get(el.roomId ?? "") ?? "other"] } : {})}
+          />
         </mesh>
       ))}
     </group>
@@ -119,7 +123,7 @@ function material(
 
   switch (el.kind) {
     case "marking":
-      return { color: roomColor(el), transparent: true, opacity: 0.7, emissive, emissiveIntensity };
+      return { transparent: true, opacity: 0.7, emissive, emissiveIntensity };
     case "plinth":
     case "column":
     case "slab":
@@ -134,8 +138,4 @@ function material(
       return { color, roughness: 0.85, emissive, emissiveIntensity };
     }
   }
-}
-
-function roomColor(el: Element) {
-  return el.roomId ? "#ffffff" : ROOM_COLORS.other;
 }
