@@ -4,6 +4,7 @@ import { del, get, set } from "idb-keyval";
 import { create } from "zustand";
 import { createJSONStorage, persist, type StateStorage } from "zustand/middleware";
 import type { ClarifyAnswer, ClarifyingQuestion, HousePlan, ImageVariant, PartVisuals, ProjectBrief, Sam3dAsset, Sketch } from "./types";
+import type { FurnitureItem } from "./furniture";
 import type { PlanIssue } from "./planCheck";
 
 export type PlanReview = {
@@ -26,6 +27,8 @@ type ProjectState = {
   // Bumped whenever the AI produces a new plan, so the review re-runs for it (manual edits don't bump it).
   planRevision: number;
   review: PlanReview | null;
+  // Furniture is tied to the plan revision it was placed for; a new AI plan makes it stale.
+  furniture: { revision: number; items: FurnitureItem[]; source: "ai" | "default" } | null;
   setStep: (step: Step) => void;
   updateBrief: (patch: Partial<ProjectBrief>) => void;
   addSketch: (sketch: Sketch) => void;
@@ -34,6 +37,7 @@ type ProjectState = {
   updatePlan: (plan: HousePlan) => void;
   applyRevision: (plan: HousePlan, answers: ClarifyAnswer[]) => void;
   setReview: (review: PlanReview) => void;
+  setFurniture: (items: FurnitureItem[], source: "ai" | "default") => void;
   addVariant: (partId: string, variant: ImageVariant) => void;
   selectVariant: (partId: string, variantId: string) => void;
   setSam3d: (asset: Sam3dAsset) => void;
@@ -68,6 +72,7 @@ export const useProject = create<ProjectState>()(
       sam3d: {},
       planRevision: 0,
       review: null,
+      furniture: null,
       setStep: (step) => setState({ step }),
       updateBrief: (patch) => setState((s) => ({ brief: { ...s.brief, ...patch } })),
       addSketch: (sketch) => setState((s) => ({ sketches: [...s.sketches, sketch] })),
@@ -81,6 +86,7 @@ export const useProject = create<ProjectState>()(
           review: s.review ? { ...s.review, questions: [], history: [...s.review.history, ...answers] } : null,
         })),
       setReview: (review) => setState({ review }),
+      setFurniture: (items, source) => setState((s) => ({ furniture: { revision: s.planRevision, items, source } })),
       addVariant: (partId, variant) =>
         setState((s) => {
           const current = s.visuals[partId] ?? { partId, variants: [], selectedId: null };
@@ -99,12 +105,12 @@ export const useProject = create<ProjectState>()(
           return { visuals: { ...s.visuals, [partId]: { ...current, selectedId } } };
         }),
       setSam3d: (asset) => setState((s) => ({ sam3d: { ...s.sam3d, [asset.partId]: asset } })),
-      reset: () => setState({ step: "sketch", brief: emptyBrief, sketches: [], plan: null, visuals: {}, sam3d: {}, planRevision: 0, review: null }),
+      reset: () => setState({ step: "sketch", brief: emptyBrief, sketches: [], plan: null, visuals: {}, sam3d: {}, planRevision: 0, review: null, furniture: null }),
     }),
     {
       name: "3d-architect-project",
       storage: createJSONStorage(() => idbStorage),
-      partialize: ({ step, brief, sketches, plan, visuals, sam3d, planRevision, review }) => ({
+      partialize: ({ step, brief, sketches, plan, visuals, sam3d, planRevision, review, furniture }) => ({
         step,
         brief,
         sketches,
@@ -113,6 +119,7 @@ export const useProject = create<ProjectState>()(
         sam3d,
         planRevision,
         review,
+        furniture,
       }),
     },
   ),

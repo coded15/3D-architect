@@ -1,7 +1,7 @@
 import "server-only";
 import type OpenAI from "openai";
 import { z } from "zod";
-import { metaClient, TEXT_MODEL } from "./meta";
+import { metaClient, REASONING_EFFORT, TEXT_MODEL } from "./meta";
 
 type Messages = OpenAI.Chat.Completions.ChatCompletionMessageParam[];
 
@@ -13,6 +13,7 @@ export async function structuredCompletion<T extends z.ZodType>(schema: T, name:
   for (let attempt = 0; attempt < 2; attempt++) {
     const completion = await metaClient().chat.completions.create({
       model: TEXT_MODEL,
+      reasoning_effort: REASONING_EFFORT,
       messages,
       response_format: { type: "json_schema", json_schema: { name, schema: jsonSchema } },
     });

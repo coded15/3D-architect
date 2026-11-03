@@ -39,4 +39,7 @@ body {
   .chip-active {
     @apply rounded-full border border-amber-600 bg-amber-600 px-3 py-1 text-sm text-white;
   }
+  .overlay-btn {
+    @apply rounded-lg bg-white/90 px-3 py-1.5 text-sm font-medium text-stone-800 shadow-md backdrop-blur hover:bg-white;
+  }
 }

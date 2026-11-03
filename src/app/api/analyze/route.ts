@@ -5,7 +5,7 @@ import { ANALYZE_SYSTEM_PROMPT, analyzeUserText } from "@/lib/prompts";
 import { structuredCompletion } from "@/lib/structured";
 import { BriefSchema, HousePlanSchema } from "@/lib/types";
 
-export const maxDuration = 120;
+export const maxDuration = 300;
 
 const RequestSchema = z.object({
   brief: BriefSchema,

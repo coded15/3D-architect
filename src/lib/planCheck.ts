@@ -1,7 +1,7 @@
 import { isSameSpace } from "./plan";
 import type { HousePlan, Room } from "./types";
 
-const OUTSIDE = "outside";
+export const OUTSIDE = "outside";
 const PROBE = 0.5;
 const EPS = 0.3;
 
@@ -34,6 +34,53 @@ function sharedEdgeLength(a: Room, b: Room): number {
   return 0;
 }
 
+export type Connection = {
+  a: string;
+  // Room id, or "outside".
+  b: string;
+  kind: "door" | "open";
+  // Midpoint of the doorway / shared opening on the wall line, plan feet.
+  x: number;
+  y: number;
+  // True when the wall runs east-west (so you cross it moving north-south).
+  horizontal: boolean;
+  floor: number;
+};
+
+// Every way to move between spaces: doors (to rooms or outside) and open joins between same-kind spaces.
+export function findConnections(plan: HousePlan): Connection[] {
+  const byId = new Map(plan.rooms.map((r) => [r.id, r]));
+  const result: Connection[] = [];
+  for (const o of plan.openings) {
+    if (o.kind !== "door") continue;
+    const room = byId.get(o.roomId);
+    if (!room) continue;
+    const horizontal = o.side === "N" || o.side === "S";
+    const mid = (horizontal ? room.x : room.y) + o.offset + o.width / 2;
+    const x = horizontal ? mid : o.side === "W" ? room.x : room.x + room.width;
+    const y = horizontal ? (o.side === "N" ? room.y : room.y + room.depth) : mid;
+    result.push({ a: room.id, b: doorTarget(plan, room, o.side, o.offset, o.width), kind: "door", x, y, horizontal, floor: room.floor });
+  }
+  for (const a of plan.rooms) {
+    for (const b of plan.rooms) {
+      if (a.id >= b.id || !isSameSpace(a, b) || sharedEdgeLength(a, b) <= 1) continue;
+      const vertical = Math.abs(a.x + a.width - b.x) < EPS || Math.abs(b.x + b.width - a.x) < EPS;
+      const x = vertical
+        ? Math.abs(a.x + a.width - b.x) < EPS
+          ? b.x
+          : a.x
+        : (Math.max(a.x, b.x) + Math.min(a.x + a.width, b.x + b.width)) / 2;
+      const y = vertical
+        ? (Math.max(a.y, b.y) + Math.min(a.y + a.depth, b.y + b.depth)) / 2
+        : Math.abs(a.y + a.depth - b.y) < EPS
+          ? b.y
+          : a.y;
+      result.push({ a: a.id, b: b.id, kind: "open", x, y, horizontal: !vertical, floor: a.floor });
+    }
+  }
+  return result;
+}
+
 export function analyzeTopology(plan: HousePlan): Topology {
   const byId = new Map(plan.rooms.map((r) => [r.id, r]));
   const label = (id: string) => (id === OUTSIDE ? "Outside" : `${byId.get(id)?.name ?? id} (${id})`);
@@ -53,34 +100,14 @@ export function analyzeTopology(plan: HousePlan): Topology {
     entryPoints.get(id)!.push({ x, y });
   };
 
-  for (const o of plan.openings) {
-    if (o.kind !== "door") continue;
-    const room = byId.get(o.roomId);
-    if (!room) continue;
-    const target = doorTarget(plan, room, o.side, o.offset, o.width);
-    link(room.id, target);
-    doorCount.set(room.id, (doorCount.get(room.id) ?? 0) + 1);
-    if (target !== OUTSIDE) doorCount.set(target, (doorCount.get(target) ?? 0) + 1);
-    connections.push(`${label(room.id)} --door on ${o.side} wall--> ${label(target)}`);
-    const horizontal = o.side === "N" || o.side === "S";
-    const mid = (horizontal ? room.x : room.y) + o.offset + o.width / 2;
-    const px = horizontal ? mid : o.side === "W" ? room.x : room.x + room.width;
-    const py = horizontal ? (o.side === "N" ? room.y : room.y + room.depth) : mid;
-    addPoint(room.id, px, py);
-    if (target !== OUTSIDE) addPoint(target, px, py);
-  }
-  // Touching spaces of the same kind (corridor pieces, verandah pieces, ...) are one open space.
-  for (const a of plan.rooms) {
-    for (const b of plan.rooms) {
-      if (a.id >= b.id || !isSameSpace(a, b)) continue;
-      if (sharedEdgeLength(a, b) > 1) {
-        link(a.id, b.id);
-        connections.push(`${label(a.id)} --open--> ${label(b.id)}`);
-        const cx = (Math.max(a.x, b.x) + Math.min(a.x + a.width, b.x + b.width)) / 2;
-        const cy = (Math.max(a.y, b.y) + Math.min(a.y + a.depth, b.y + b.depth)) / 2;
-        addPoint(a.id, cx, cy);
-        addPoint(b.id, cx, cy);
-      }
+  for (const c of findConnections(plan)) {
+    link(c.a, c.b);
+    connections.push(`${label(c.a)} --${c.kind}--> ${label(c.b)}`);
+    addPoint(c.a, c.x, c.y);
+    if (c.b !== OUTSIDE) addPoint(c.b, c.x, c.y);
+    if (c.kind === "door") {
+      doorCount.set(c.a, (doorCount.get(c.a) ?? 0) + 1);
+      if (c.b !== OUTSIDE) doorCount.set(c.b, (doorCount.get(c.b) ?? 0) + 1);
     }
   }
 

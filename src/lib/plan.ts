@@ -182,7 +182,8 @@ function uniqueSorted(values: number[]) {
   return sorted.filter((v, i) => i === 0 || v - sorted[i - 1] > 0.01);
 }
 
-// Models often describe one doorway from both rooms at slightly different spots; keep one door per room pair.
+// Models often describe one doorway from both rooms at slightly different spots; keep one door per room pair,
+// and drop doors between two pieces of the same open space.
 export function dedupeDoors(plan: HousePlan): HousePlan {
   const byId = new Map(plan.rooms.map((r) => [r.id, r]));
   const seen = new Set<string>();
@@ -200,6 +201,8 @@ export function dedupeDoors(plan: HousePlan): HousePlan {
       (r) => r.id !== room.id && r.floor === room.floor && px > r.x && px < r.x + r.width && py > r.y && py < r.y + r.depth,
     );
     if (!other) return true;
+    // No door needed inside one open space (e.g. between two corridor pieces).
+    if (isSameSpace(room, other)) return false;
     const key = [room.id, other.id].sort().join("|");
     if (seen.has(key)) return false;
     seen.add(key);

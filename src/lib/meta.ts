@@ -4,6 +4,8 @@ import OpenAI from "openai";
 export const META_BASE_URL = process.env.META_BASE_URL ?? "https://api.meta.ai/v1";
 export const TEXT_MODEL = process.env.META_TEXT_MODEL ?? "muse-spark-1.3";
 export const IMAGE_MODEL = process.env.META_IMAGE_MODEL ?? "muse-image-1.0";
+// Muse Spark reasons before answering; "high" makes it think longest on sketches, reviews and layouts.
+export const REASONING_EFFORT = (process.env.META_REASONING_EFFORT ?? "high") as "low" | "medium" | "high";
 
 // Without a key the API routes return deterministic mock data so the UI can be developed offline.
 export const isMockMode = () => !process.env.MODEL_API_KEY || process.env.MOCK_AI === "1";

@@ -11,7 +11,7 @@ export const STAGES = [
   { id: "finishing", label: "Finishing", note: "Flooring, windows and final touches." },
 ] as const;
 
-export type ElementKind = "marking" | "plinth" | "column" | "wall" | "slab" | "floorFinish" | "glass";
+export type ElementKind = "marking" | "plinth" | "column" | "wall" | "slab" | "floorFinish" | "glass" | "door";
 
 export type Element = {
   key: string;
@@ -135,6 +135,38 @@ export function buildHouse(plan: HousePlan): Element[] {
     }
   }
 
+  // Door leaves, swung fully open into the room that owns the door. The hinge goes on the end farther
+  // from that room's centre so the leaf rests out of the way of anyone walking through.
+  const placedLeaves: { floor: number; horizontal: boolean; line: number; start: number; end: number }[] = [];
+  for (const o of plan.openings) {
+    if (o.kind !== "door") continue;
+    const room = plan.rooms.find((r) => r.id === o.roomId);
+    if (!room) continue;
+    const horizontal = o.side === "N" || o.side === "S";
+    const line = horizontal ? (o.side === "N" ? room.y : room.y + room.depth) : o.side === "W" ? room.x : room.x + room.width;
+    const start = (horizontal ? room.x : room.y) + o.offset;
+    const end = start + o.width;
+    if (placedLeaves.some((l) => l.floor === room.floor && l.horizontal === horizontal && Math.abs(l.line - line) < EPS && Math.min(l.end, end) - Math.max(l.start, start) > 0.5)) continue;
+    placedLeaves.push({ floor: room.floor, horizontal, line, start, end });
+    const inward = o.side === "N" || o.side === "W" ? 1 : -1;
+    const mid = (start + end) / 2;
+    const probe = horizontal ? { x: mid, y: line - inward * 0.5 } : { x: line - inward * 0.5, y: mid };
+    const across = plan.rooms.find(
+      (r) => r.id !== room.id && r.floor === room.floor && probe.x > r.x && probe.x < r.x + r.width && probe.y > r.y && probe.y < r.y + r.depth,
+    );
+    // A "door" inside one open space (corridor piece to corridor piece) has no wall, so no leaf either.
+    if (across && isSameSpace(room, across)) continue;
+    const outside = !across;
+    const face = line + inward * (outside ? EXTERIOR_WALL : INTERIOR_WALL / 2);
+    const roomMid = horizontal ? room.x + room.width / 2 : room.y + room.depth / 2;
+    const hinge = Math.abs(start - roomMid) > Math.abs(end - roomMid) ? start + 0.08 : end - 0.08;
+    const leafEnd = face + inward * (o.width - 0.15);
+    const base = floorBase(plan, room.floor);
+    const [a0, a1] = [Math.min(face, leafEnd), Math.max(face, leafEnd)];
+    if (horizontal) box(`door-${o.id}`, "door", room, room.floor, hinge - 0.06, hinge + 0.06, base, base + LINTEL - 0.05, a0, a1);
+    else box(`door-${o.id}`, "door", room, room.floor, a0, a1, base, base + LINTEL - 0.05, hinge - 0.06, hinge + 0.06);
+  }
+
   const corners = new Map<string, { x: number; y: number; floor: number }>();
   for (const r of plan.rooms) {
     for (const [cx, cy] of [
@@ -161,6 +193,22 @@ export function buildHouse(plan: HousePlan): Element[] {
   }
 
   return els;
+}
+
+export type Obstacle = { minX: number; maxX: number; minZ: number; maxZ: number };
+
+// Footprints (three.js x/z) of anything you'd bump into at body height on a floor: walls, sills and glass.
+export function wallObstacles(plan: HousePlan, elements: Element[], floor: number): Obstacle[] {
+  const base = floorBase(plan, floor);
+  return elements
+    .filter((el) => el.floor === floor && (el.kind === "wall" || el.kind === "glass"))
+    .filter((el) => el.position[1] - el.size[1] / 2 < base + 5.5 && el.position[1] + el.size[1] / 2 > base + 0.3)
+    .map((el) => ({
+      minX: el.position[0] - el.size[0] / 2,
+      maxX: el.position[0] + el.size[0] / 2,
+      minZ: el.position[2] - el.size[2] / 2,
+      maxZ: el.position[2] + el.size[2] / 2,
+    }));
 }
 
 type WallSegment = {

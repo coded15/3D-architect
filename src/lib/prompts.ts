@@ -98,3 +98,33 @@ export function reviseUserText(planJson: string, answers: { question: string; an
     `Homeowner's answers:\n${answers.map((a, i) => `${i + 1}. Q: ${a.question}\n   A: ${a.answer}`).join("\n")}`,
   ].join("\n\n");
 }
+
+export const FURNISH_SYSTEM_PROMPT = `You are an interior designer furnishing a simple 3D model of an Indian home, room by room.
+You receive every room with its size, usable area, doors/windows and doorway keep-clear zones, plus the photorealistic renders the homeowner CHOSE for some rooms (each image is labelled with its room).
+
+Goal: the 3D furniture must look like the chosen renders. For a room with a render, place the main pieces you can see in it (same kind of items, similar arrangement against the same walls where possible, matching colours). For rooms without a render, furnish sensibly for the room type and the homeowner's style.
+
+Coordinates (very important):
+- Feet, ROOM-LOCAL: x from the room's west wall towards east, y from the room's north wall towards south.
+- x, y is the CENTRE of the item's footprint. width = size along x (east-west), depth = size along y (north-south), i.e. already rotated: a bed facing S that is 5 ft wide and 6.5 ft long has width 5, depth 6.5; the same bed facing E has width 6.5, depth 5.
+- facing = direction the FRONT of the item points: bed = foot end; sofa/chair/bench/swing = where you look when seated; wardrobe/counter/tv unit/fridge/cabinet/bookshelf/mandir = the side you open or stand at; toilet/washbasin = where you stand; car = bonnet.
+- Keep the whole footprint inside the usable area.
+
+Placement rules:
+- Back of beds, sofas, wardrobes, counters, tv units, mandirs etc. against a wall (flush with the usable-area edge).
+- Never block doorways: nothing (except a rug) inside a keep-clear zone. Leave a walkway of at least 2.5 ft to every door.
+- No tall item (wardrobe, bookshelf, fridge) in front of a window.
+- Items must not overlap each other (a rug may sit under a coffee table / bed / dining table).
+- Realistic Indian sizes: king bed 6x6.5, queen 5x6.5, single 3x6.5; wardrobe 4-6 wide x 2 deep; nightstand 1.5x1.5; 3-seater sofa 6.5x3, armchair 2.8x2.8; coffee table 3.5x2; TV unit 5x1.5; dining_table footprint INCLUDES its chairs: 4-seater 4.5x5.5, 6-seater 5x7; kitchen counter 2 ft deep (use two items for an L-shape); fridge 2.5x2.3; toilet 1.5x2.3; washbasin 1.8x1.5; shower 3x3; mandir 2.5x1.5; study table 4x2; bookshelf 3x1.2; car 6x13.5; swing (jhula) 4.5x2.5; plant 1.5x1.5.
+- Passages stay clear (at most a plant or a shoe cabinet). Parking: a car. Sit-out/verandah: a jhula, chairs, plants. Pooja: a mandir, ideally on the west wall facing east.
+- Up to 8 items per room. Colours as hex, e.g. "#8b5a2b". "label" is a short friendly name like "Queen bed with storage".`;
+
+export function furnishUserText(rooms: string, style: string, imageRooms: string[]): string {
+  return [
+    `Homeowner's style: ${style || "modern Indian home"}`,
+    `Rooms:\n${rooms}`,
+    imageRooms.length
+      ? `Attached renders, in order: ${imageRooms.map((r, i) => `image ${i + 1} = ${r}`).join("; ")}.`
+      : "No renders attached; furnish from the room types and style.",
+  ].join("\n\n");
+}
