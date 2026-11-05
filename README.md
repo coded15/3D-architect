@@ -2,9 +2,9 @@
 
 From a rough hand-drawn floor plan to a home everyone can see, before a single brick is laid. Built for the Meta Global AI Developer Hackathon 2026 (Indie Developer Track · Build for Your World).
 
-[![3D-architect demo video](https://img.youtube.com/vi/m6icz-Cf_Sc/maxresdefault.jpg)](https://youtu.be/m6icz-Cf_Sc)
+[![3D-architect demo video](https://img.youtube.com/vi/m6icz-Cf_Sc/maxresdefault.jpg)](https://youtu.be/1cSg1A4Hz38)
 
-🎥 **Demo video:** https://youtu.be/m6icz-Cf_Sc
+🎥 **Demo video:** https://youtu.be/1cSg1A4Hz38
 
 ## Why
 
@@ -21,10 +21,10 @@ For most Indian families a home is built once in a lifetime, yet the plan usuall
 
 ## Meta models
 
-| Model | Used for |
-| --- | --- |
+| Model                                                   | Used for                                                                                                                                         |
+| ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Muse Spark (`muse-spark-1.3`, `reasoning_effort: high`) | Reading the sketch, reviewing the plan and asking questions, revising the plan from answers, placing furniture (vision + structured JSON output) |
-| Muse Image (`muse-image-1.0`) | Elevation and room renders guided by the sketch, plain-language edits via `previous_response_id` |
+| Muse Image (`muse-image-1.0`)                           | Elevation and room renders guided by the sketch, plain-language edits via `previous_response_id`                                                 |
 
 All calls go through the Meta Model API (`https://api.meta.ai/v1`) with the OpenAI-compatible SDK, from server-side route handlers so the API key never reaches the browser.
 
@@ -40,21 +40,21 @@ Open http://localhost:3000. Without `MODEL_API_KEY`, the API routes return a sam
 
 ## Project structure
 
-| Path | Purpose |
-| --- | --- |
-| `src/app/api/analyze` | Sketch + notes → `HousePlan` JSON (Muse Spark) |
-| `src/app/api/review` | Plan + sketch → clarifying questions (Muse Spark) |
-| `src/app/api/revise` | Plan + answers → revised plan (Muse Spark) |
-| `src/app/api/render` | Elevation and room images, and edits (Muse Image) |
-| `src/app/api/furnish` | Plan + chosen renders → furniture layout (Muse Spark) |
-| `src/app/api/sam3d` | Proxy to an optional self-hosted SAM 3D Objects server |
-| `src/lib/types.ts` | Plan and question schemas (zod), shared by the API and UI |
-| `src/lib/plan.ts` | Cleanup of model output: snap rooms together, fill leftover space, remove duplicate doors |
-| `src/lib/planCheck.ts` | Connections, reachability and dead-end checks used by the review |
-| `src/lib/house3d.ts` | Plan → walls, openings, slabs and construction stages |
-| `src/lib/furniture.ts` | Furniture validation and 3D shapes |
-| `src/lib/tour.ts` | Guided tour route through doorways |
-| `src/components` | Step UIs, 2D plan (SVG), 3D viewer with walk and tour modes (React Three Fiber) |
+| Path                   | Purpose                                                                                   |
+| ---------------------- | ----------------------------------------------------------------------------------------- |
+| `src/app/api/analyze`  | Sketch + notes → `HousePlan` JSON (Muse Spark)                                            |
+| `src/app/api/review`   | Plan + sketch → clarifying questions (Muse Spark)                                         |
+| `src/app/api/revise`   | Plan + answers → revised plan (Muse Spark)                                                |
+| `src/app/api/render`   | Elevation and room images, and edits (Muse Image)                                         |
+| `src/app/api/furnish`  | Plan + chosen renders → furniture layout (Muse Spark)                                     |
+| `src/app/api/sam3d`    | Proxy to an optional self-hosted SAM 3D Objects server                                    |
+| `src/lib/types.ts`     | Plan and question schemas (zod), shared by the API and UI                                 |
+| `src/lib/plan.ts`      | Cleanup of model output: snap rooms together, fill leftover space, remove duplicate doors |
+| `src/lib/planCheck.ts` | Connections, reachability and dead-end checks used by the review                          |
+| `src/lib/house3d.ts`   | Plan → walls, openings, slabs and construction stages                                     |
+| `src/lib/furniture.ts` | Furniture validation and 3D shapes                                                        |
+| `src/lib/tour.ts`      | Guided tour route through doorways                                                        |
+| `src/components`       | Step UIs, 2D plan (SVG), 3D viewer with walk and tour modes (React Three Fiber)           |
 
 Project state is stored in the browser (IndexedDB).
 
